@@ -7,7 +7,7 @@ is explained at <a href=https://sam.js.org>sam.js.org</a>
 
 The advance to Jean-Jacques Dubray's SAM pattern presented here is the added notion of <b>cascading</b> the SAM complexes such that they can have a parent/child relationship.
 
-A complete description of the package's capabilities can be found at [SAMCAS - POI Excel Utilities](https://stevepritchard.ca/home/samcas/samcas-implementation.htm)
+A complete description of the package's capabilities can be found at [SAMCAS - Implementation](https://stevepritchard.ca/home/samcas/samcas-implementation.htm)
 
 ### Repository Contents ####
 
