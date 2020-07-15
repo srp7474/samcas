@@ -1,0 +1,108 @@
+<!--
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+-->
+<html>
+<head>
+  <link rel="icon" type="image/x-icon" href="icons/samc-info.ico">
+  <title>Simple Rocket Launcher Demonstration</title>
+  <style type="text/css">
+    h1  span       {font-size:22px;position:relative; top:-10px; display:inline-block;}
+    body           {width:800px; font-family:'Fira Sans',Helvetica,Arial,sans-serif}
+    span.gen-err   {color:red;}
+    img.hdr        {width:40px;height:40px;margin-right:10px;}
+    div ul.sam li  {margin-top:5px;}
+  </style>
+</head>
+<body>
+
+<h1><a href=http://stevepritchard.ca><img class=hdr src=img/sam-flow.jpg></a><span>A Cascaded SAM Implementation by Steve Pritchard</span></h1>
+<p>The SAM (State-Action-Model) pattern proposed by <a href=https://www.infoq.com/profile/Jean~Jacques-Dubray>Jean-Jacques Dubray</a> is explained at <a href=https://sam.js.org>sam.js.org</a></p>
+
+<p>The advance to Jean-Jacques Dubray's SAM pattern presented here is the added notion of <b>cascading</b> the SAM complexes such that they can have a parent/child relationship.</p>
+
+<p>A working Rocket example using this implemenation can be seen at <a href=rocket-samcas.htm>Rocket Example</a>.
+The Pause option was added because it added more complexity and permutations to the state machine.
+</p>
+
+<p>A working cascaded example using the Rocket model as a component can be seen at <a href=missiles-samcas.htm>Missiles Example</a>.<p>
+
+<div>This implementation has the following characteristics:
+  <ul class=sam>
+    <li>The SAM pattern is implemented using 4 classes. <b>SamModel</b>, <b>SamState</b>, <b>SamActions</b> and <b>SamView</b>. When the 4 are linked together they are referred to as
+    the "Model complex" or "SAM complex" internally and in this document.
+    </li>
+    <li>SamState, SamActions and SamView (called the "mold" internally) are readonly classes that are defined using tabular structures with no logic. As such for the most part they
+    are a templated structure that is filled in with actions, states and the view HTML.<br><br>
+    The exception to this tabular design are the functions that may be included in the SamActions class.
+    <br><br>Since the mold components are readonly a single instance of each can be shared by multiple instances
+    of the SamModel class.</li>
+    <li>The SamModel instance contains the volatile information. In addition it contains pointers to the associated SamActions, SamState and SamView instances.
+    If the SamModel is a child it will have a parent pointer.
+    If a SamModel is a parent it will have a list of child SamModel instances.</li>
+    <li>The state of the model is stored in the string <b>strState</b>. This is a deviation from the functional idea expressed by Jean-Jacques Dubray. Using a string means
+    the current state can be easily shown and tested. In addition, both compile time and runtime validation can more easily be performed.</li>
+    <li>A parent communicates via the <i>present</i> method of the child model. A child communicates with the parent using the <i>signal</i> method which results in a <i>present</i>
+    method call to the parent model.</li>
+    <li>The <i>present</i> implementation varies in a few respects from the basic implementation found in the Rocket launcher example.
+      <ol>
+         <li>It adds a parameter where the caller specifies what state the model is expected to be in. If this is not the case it is rejected as a concurrency error. This was found to be
+         very useful in rooting out state cominations and actions that were not considered or implemented.
+         </li>
+         <li>The step process may or may not change the model state. It will possibly update model variable values. It can also indicate whether the next 3 processes should run with a render=true,nap=true or signal=true flag.</li>
+         <li>The render process is only called if the model state changes or the render flag is true.</li>
+         <li>The nextAction (nap) process is only called if it exists in the state definition and when the model state changes or the nap flag is true.</li>
+         <li>The signal process is only called if it exists in the state definition and when the model state changes or the signal flag is true.</li>
+      </ol>
+    </li>
+    <li> Strings are used extensively in the implementation to represent state, actions, function references. Futhermore, each string has a 2 byte prefix indication what
+    type of string it is.
+      <ul>
+         <li><b>ss</b> - SAM state such as ssActive</li>
+         <li><b>sg</b> - SAM state such as sgClosed</li>
+         <li><b>sa</b> - SAM action such as saDecrement</li>
+         <li><b>fn</b> - SAM function name implementing an action.</li>
+      </ul>
+      Internal names use a '-' as the 3rd character such as <i>ss-virgin</i> (which is the initial state of a model until the SamModel.activate() method is called).
+      This prevents name clashes.
+    </li>
+    <li>The use of prefixed strings in this way means an editor can easily be used to locate dependencies between various pieces of code.</li>
+    <li>The table driven design of the classes would lend itself to being created by a GUI engine (future).</li>
+    <li>The support code validates the transitions</li>
+    <li>The 'factory' used to build the Model complex validates the complex for inconsistencies such as missing states that are referenced in action codes.</li>
+    <li>The HTML is generated from templates in the SamView using a slightly enhanced copy of mustache.js. This enhanced mustache.js code allows for the following.
+      <ul>
+         <li>Form components to be easily generated that have standard action behavoirs that are easily routed to the right SAM component.</li>
+         <li>This design allows for bi-directional modeling between the SamModel value and the form component.</li>
+         <li>Parameter validation is performed to root out inconsistencies such as an action name that is not implemented.</li>
+         <li>A single HTML template can be varied based on the current model state or can have a comletely dirrent view.</li>
+         <li>The CSS can be tightly bound to the view without incurring global intrusions (unless wanted).</li>
+      </ul>
+    </li>
+    <li>As the model runs it is conceivable to capture and replay the 'events' at the presentation layer.  This gives a simple way to test and retest such SAM complexes.</li>
+  </ul>
+</div>
+</body>
+</html>
